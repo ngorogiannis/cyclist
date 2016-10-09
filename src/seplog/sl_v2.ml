@@ -562,13 +562,20 @@ module SymHeap =
     
     let exists = exists_atoms
     
-    let _build_uf f =
-        fold 
-          (fun atom a -> if is_eq atom then Sl_uf.add (dest_eq atom) a else a)
-          f
-          Sl_uf.empty
-     
-    let equates f x y = 
+    (* let _build_uf f =                                                          *)
+    (*     fold                                                                   *)
+    (*       (fun atom a -> if is_eq atom then Sl_uf.add (dest_eq atom) a else a) *)
+    (*       f                                                                    *)
+    (*       Sl_uf.empty                                                          *)
+    
+    (* explicitly recursive version for recursive memoisation *) 
+    let rec _build_uf f = match f.node with
+      | Exists(_, g) -> _build_uf g
+      | Eq eq -> Sl_uf.of_list [eq] (* this is lazy *)
+      | Star(g,h) -> Sl_uf.union (_build_uf g) (_build_uf h)
+      | _ -> Sl_uf.empty
+    
+		let equates f x y = 
       Sl_uf.equates (_build_uf f) x y
     
     let disequates f x y =
@@ -630,11 +637,11 @@ module SymHeap =
             (Sl_term.Set.diff rest new_cvalued) in
       aux freevars existvars
     
-    let subst_tags Tagpairs f =
+    let subst_tags tagpairs f =
       map_atoms
         (fun g -> 
           if is_pred g then 
-            mk_pred (Sl_tpred.subst_tag Tagpairs (dest_pred g))
+            mk_pred (Sl_tpred.subst_tag tagpairs (dest_pred g))
           else
             g
         )
