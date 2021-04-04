@@ -2,7 +2,7 @@ null  :=
 space := $(null) #
 comma := ,
 
-PKGS := unix,str,hashcons,hashset,mparser.pcre,ocamlgraph,dynlink
+PKGS := unix,str,hashcons,hashset,mparser-pcre,ocamlgraph,dynlink
 TAGS := debug,explain,annot,use_libsoundness
 OCAMLDOC := ocamldoc -hide-warnings
 INCLUDES := $(subst $(space),$(comma),$(strip $(wildcard src/*)))
