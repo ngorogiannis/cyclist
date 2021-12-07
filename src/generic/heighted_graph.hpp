@@ -11,30 +11,30 @@
 #include <vector>
 #include <thread>
 
+#define DURATION std::chrono::duration<double, std::milli>
+
 class Heighted_graph {
 private:
-    int                     max_nodes;
-    int                     number_of_edges;
-    Map<int, int>           node_idxs;
-    std::vector<Int_SET*>   HeightsOf;
-    Sloped_relation***      h_change_;
-    Sloped_Relation_SET***  Ccl;
-    Relation_LIST*          rejected;
+    int                   max_nodes;
+    int                   number_of_edges;
+    Map<int, int>         node_idxs;
+    std::vector<Int_SET*> HeightsOf;
+    Sloped_relation***    h_change_;
+    Relation_LIST_LIST*** Ccl;
+    Relation_LIST*        rejected;
 
-    int                     ccl_initial_size;
-    int                     ccl_size;
-    int                     ccl_replacements;
-    int                     ccl_rejections;
-    int                     compositions;
-    int                     comparisons;
-    int                     loop_checks;
-    int                     checked_size_sum;
-    std::chrono::duration<double, std::milli> compose_time;
-    std::chrono::duration<double, std::milli> compare_time;
-    std::chrono::duration<double, std::milli> insertion_time;
-    std::chrono::duration<double, std::milli> loop_check_time;
+    int                   ccl_initial_size;
+    int                   ccl_size;
+    int                   ccl_replacements;
+    int                   ccl_rejections;
+    int                   compositions;
+    int                   comparisons;
+    int                   loop_checks;
+    int                   checked_size_sum;
+    DURATION              compose_time;
+    DURATION              compare_time;
+    DURATION              loop_check_time;
 
-    bool check_self_loop(Sloped_relation *R, int node, int opts);
     bool check_Ccl(int opts);
 
 public:
