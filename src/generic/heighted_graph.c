@@ -163,6 +163,29 @@ int Heighted_graph::num_edges(void) {
     return number_of_edges;
 }
 
+int print_all_relations(Relation_LIST_LIST& all_rels) {
+    int num_rels = 0;
+    for (Relation_LIST* rels : all_rels) {
+        for (Sloped_relation* R : *rels) {
+            num_rels++;
+            std::cout << *R;
+        }
+    }
+    return num_rels;
+}
+
+void Heighted_graph::print_Ccl(void){
+    int num_nodes = this->num_nodes();
+    int num_rels = 0;
+    for (int source = 0; source < num_nodes; source++) {
+    for (int sink = 0; sink < num_nodes; sink++) {
+        std::cout << "Source: " << source << ", Sink: " << sink << std::endl;
+        num_rels += print_all_relations(*Ccl[source][sink]);
+    }
+    }
+    std::cout << "Size of CCL: " << num_rels << std::endl;
+}
+
 struct ccl_data {
     int additions = 0;
     int compositions = 0;
@@ -287,19 +310,12 @@ bool compose_lists(Relation_LIST_LIST* composed,
                    int source, int sink, Int_SET& src_heights,
                    Relation_LIST* rejected, ccl_data& data, int opts) {
 
-    // std::cout << "Beginning list composition" << std::endl;
-    // if (left == NULL) std::cout << "left is NULL!" << std::endl;
-    // if (right == NULL) std::cout << "right is NULL!" << std::endl;
-
-    // std::cout << "Size of left list: " << left->size() << std::endl;
     for (Sloped_relation* P : *left) {
 
-        // if (P == NULL) std::cout << "P is NULL!" << std::endl;
         if (P->size() == 0) continue;
 
         for (Sloped_relation* Q : *right) {
 
-            // if (Q == NULL) std::cout << "Q is NULL!" << std::endl;
             if (Q->size() == 0) continue;
 
             // Generate new sloped relation
@@ -319,28 +335,22 @@ bool compose_lists(Relation_LIST_LIST* composed,
             bool need_to_add = true;
             bool cont = true;
 
-            // std::cout << "Computed new composition for " << source << ", " << sink << std::endl << *R;
-            
             // Now compare with the existing relations to see if we need to add
             // the new one to the CCL
-            auto outer = composed->begin();
-            while (outer != composed->end()) {
+            for (auto outer = composed->begin(); outer != composed->end(); outer++) {
 
                 for (auto inner = (*outer)->begin(); inner != (*outer)->end(); inner++) {
                     Sloped_relation* S = *inner;
-                    // std::cout << "Comparing with existing relation" << std::endl << *S;
                     CompareResult res = compare_rels(*R, *S, data, opts);
-                    // std::cout << "Result is " << res << std::endl;
                     if (res == REJECT) {
                         data.rejections++;
                         rejected->push_back(R);
                         need_to_add = false;
                     }
                     if (res == REPLACE) {
-                        // std::cout << "Replacing" << std::endl;
                         data.replacements++;
                         rejected->push_back(S);
-                        (*outer)->erase(inner);
+                        (*outer)->erase(inner--);
                     }
                     if (res != CONTINUE) {
                         cont = false;
@@ -348,27 +358,17 @@ bool compose_lists(Relation_LIST_LIST* composed,
                     }
                 }
 
-                /*** SOMETHING WRONG WITH THIS - DON'T KNOW WHAT YET ***/
                 // If we have replaced the last sloped relation in a collection
                 // of sloped relationss generated in a previous iteration of the
                 // fixed point computation, then remove this now empty collection
-                // if (outer != composed->begin() 
-                //       && (*outer)->size() == 0 && composed->size() > 2) {
-                //     std::cout << "Removing an empty collection "
-                //               << "from CCL bucket of size "
-                //               << composed->size()
-                //               << std::endl;
-                //     auto to_erase = outer;
-                //     outer++;
-                //     composed->erase(to_erase);
-                //     continue;
-                // }
+                if ((*outer)->size() == 0 
+                      && outer != composed->begin() && composed->size() > 2) {
+                    composed->erase(outer--);
+                }
 
                 if (!cont) {
                     break;
                 }
-
-                outer++;
 
             }
 
@@ -384,9 +384,6 @@ bool compose_lists(Relation_LIST_LIST* composed,
 
             if (need_to_add) {
                 (composed->front())->push_back(R);
-                // std::cout << "Adding relation, source " << source 
-                //           << ", sink " << sink << std::endl
-                //           << *R;
                 data.additions++;
             } else {
                 rejected->push_back(R);                        
@@ -489,12 +486,9 @@ bool Heighted_graph::check_soundness(int opts){
 
             // Record for storing performance metrics
             ccl_data data;
-            // std::cout << "Additions: " << data.additions << std::endl;
             bool fail_now = false;
 
             for (int middle = 0; middle < num_nodes; middle++) {
-
-                // std::cout << "Beginning new intermediate iteration" << std::endl;
 
                 // No relations to compose
                 if (Ccl[source][middle]->size() == 1) continue;
@@ -512,11 +506,8 @@ bool Heighted_graph::check_soundness(int opts){
                     continue;
                 }
 
-                // Otherwise there are potentially new relations to compute
-                auto left_rest = std::next(left_start);
-                auto right_rest = std::next(right_start);
-
-                /*
+                /* Otherwise there are potentially new relations to compute
+                 *
                  * 1. Compose R in left_new with R' in right_new
                  * 2. Compose R in left_rest with R' in right_new
                  * 3. Compose R in left_new with R' in right_rest
@@ -526,8 +517,6 @@ bool Heighted_graph::check_soundness(int opts){
                  */
                 bool result;
 
-                // std::cout << "1. Compose R in left_new with R' in right_new" << std::endl;
-                // std::cout << "" << std::endl;
                 // 1. Compose R in left_new with R' in right_new
                 result = compose_lists(Ccl[source][sink],
                                        left_new, right_new,
@@ -538,9 +527,8 @@ bool Heighted_graph::check_soundness(int opts){
                     break;
                 }
                 
-                // std::cout << "2. Compose R in left_rest with R' in right_new" << std::endl;
                 // 2. Compose R in left_rest with R' in right_new
-                for (auto it = left_rest; it != Ccl[source][middle]->end(); it++) {
+                for (auto it = std::next(left_start); it != Ccl[source][middle]->end(); it++) {
                     Relation_LIST* left_old = *it;
                     result = compose_lists(Ccl[source][sink],
                                            left_old, right_new, 
@@ -553,9 +541,8 @@ bool Heighted_graph::check_soundness(int opts){
                 }
                 if (fail_now) { break; }
 
-                // std::cout << "3. Compose R in left_new with R' in right_rest" << std::endl;
                 // 3. Compose R in left_new with R' in right_rest
-                for (auto it = right_rest; it != Ccl[middle][sink]->end(); it++) {
+                for (auto it = std::next(right_start); it != Ccl[middle][sink]->end(); it++) {
                     Relation_LIST* right_old = *it;
                     result = compose_lists(Ccl[source][sink],
                                            left_new, right_old, 
@@ -621,25 +608,6 @@ bool Heighted_graph::check_Ccl(int opts) {
         if (!result) break;
     }
     return result;
-}
-
-void Heighted_graph::print_Ccl(void){
-    int num_nodes = this->num_nodes();
-    int num_rels = 0;
-    for (int source = 0; source < num_nodes; source++) {
-    for (int sink = 0; sink < num_nodes; sink++) {
-        for (Relation_LIST* rels : *Ccl[source][sink]) {
-        for (Sloped_relation* R : *rels) {
-            num_rels++;
-            std::cout << "<><><><><><><><><><><><><><><><><><><><><><><><><><><><><>" << std::endl;
-            std::cout << source << " " << sink << std::endl;
-            std::cout << *R;
-            std::cout << "<><><><><><><><><><><><><><><><><><><><><><><><><><><><><>" << std::endl;
-        }
-        }
-    }
-    }
-    std::cout << "Size of CCL: " << num_rels << std::endl;
 }
 
 void Heighted_graph::print_statistics(void) {
