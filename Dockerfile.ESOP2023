@@ -50,7 +50,7 @@ RUN \
   cd /home/opam && \
   mkdir cyclist
 
-COPY ./* /home/opam/cyclist/
+COPY . /home/opam/cyclist/
 
 RUN \
   cd /home/opam/cyclist && \
