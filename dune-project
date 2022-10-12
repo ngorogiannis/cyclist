@@ -2,18 +2,6 @@
 
 (name cyclist)
 
-(authors 
-  "Nikos Gorogiannis <nikos.gorogiannis+www@gmail.com>"
-  "Reuben Rowe <reuben.rowe@rhul.ac.uk>"
-  "Gadi Tellez Espinosa")
-
-(maintainers 
-  "Nikos Gorogiannis <nikos.gorogiannis+www@gmail.com>"
-  "Reuben Rowe <reuben.rowe@rhul.ac.uk>")
-
-(source (github ngorogiannis/cyclist))
-(homepage http://www.cyclist-prover.org/)
-
 (package
  (name cyclist)
  (synopsis "Cyclist is a framework for building cyclic theorem provers")

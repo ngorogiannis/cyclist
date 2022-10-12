@@ -1,7 +1,5 @@
 FROM ocaml/opam2
 
-LABEL maintainer="Reuben N. S. Rowe (reuben.rowe@rhul.ac.uk)"
-
 ARG DEBIAN_FRONTEND=noninteractive
 
 ENV TERM linux

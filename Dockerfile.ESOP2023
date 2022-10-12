@@ -1,7 +1,5 @@
 FROM ocaml/opam2
 
-LABEL maintainer="Reuben N. S. Rowe (reuben.rowe@rhul.ac.uk)"
-
 ARG DEBIAN_FRONTEND=noninteractive
 
 ENV TERM linux
@@ -50,11 +48,14 @@ RUN \
 
 RUN \
   cd /home/opam && \
-  git clone https://github.com/ngorogiannis/cyclist.git && \
-  cd cyclist && \
+  mkdir cyclist
+
+COPY ./* /home/opam/cyclist/
+
+RUN \
+  cd /home/opam/cyclist && \
   eval `opam config env` && \
   opam update && \
-  git checkout ESOP2023-Submission && \
   opam install -y --deps-only ./cyclist.opam && \
   rm -f dune-workspace && \
   mv dune-workspace.ESOP2023 dune-workspace && \
