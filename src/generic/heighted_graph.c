@@ -11,7 +11,8 @@
 #include <unordered_set>
 #include <thread>
 #include <utility>
-
+#include <mutex>
+#include <condition_variable>
 //=============================================================
 // Flag init
 //=============================================================
@@ -575,3 +576,200 @@ bool Heighted_graph::set_based_check(SD_decrease_type SD_DEC_TYPE) {
 }
 
 //=============================================================
+
+
+
+void thor_sd(Heighted_graph* hg){
+   
+    
+    // // Wait until main() sends data
+    {
+        std::unique_lock<std::mutex> lk(*(hg->m));
+        // cv.wait(lk, []{return mainReady;});
+        hg->cv->wait(lk, [hg]{return *(hg->mainReady);});
+    }
+        std::cout << "thor_sd"<< std::endl;
+
+ 
+    // std::cout << "Worker thread 2 is processing data: " << data << std::endl;
+ 
+    // Send data back to main()
+    {
+        // std::lock_guard<std::mutex> lk(*(hg->m));
+        std::cout << "SD START" << std::endl;
+        bool res = hg->sd_check();
+        std::cout << "SD DONE" << std::endl;
+
+        *(hg->SD_done) = true;
+        std::lock_guard<std::mutex> lk(*(hg->m));
+        hg->res->at(0) = (res ? 1 : 0);
+        // std::cout << "Worker thread 2 signals data processing completed\n";
+    }
+    hg->cv->notify_all();
+    
+
+
+}
+
+void thor_xsd(Heighted_graph* hg){
+
+
+    // // Wait until main() sends data
+    {
+        std::unique_lock<std::mutex> lk(*(hg->m));
+        // cv.wait(lk, []{return mainReady;});
+        hg->cv->wait(lk, [hg]{return *(hg->mainReady);});
+    }
+        std::cout << "thor_xsd"<< std::endl;
+
+    // std::cout << "Worker thread 2 is processing data: " << data << std::endl;
+ 
+    // Send data back to main()
+    {
+        // std::lock_guard<std::mutex> lk(*(hg->m));
+
+        std::cout << "XSD START" << std::endl;
+        bool res = hg->xsd_check();
+        std::cout << "XSD DONE" << std::endl;
+
+        *(hg->XSD_done) = true;
+        std::lock_guard<std::mutex> lk(*(hg->m));
+        hg->res->at(1) = (res ? 1 : 0);
+        // std::cout << "Worker thread 2 signals data processing completed\n";
+    }
+    hg->cv->notify_all();
+
+}
+
+void thor_rel(Heighted_graph* hg,int opts){
+    
+
+    // // Wait until main() sends data
+    {
+        std::unique_lock<std::mutex> lk(*(hg->m));
+        // cv.wait(lk, []{return mainReady;});
+        hg->cv->wait(lk, [hg]{return *(hg->mainReady);});
+    }
+    std::cout << "thor_rel"<< std::endl;
+ 
+    // // std::cout << "Worker thread 2 is processing data: " << data << std::endl;
+ 
+    // Send data back to main()
+    {
+        
+
+        std::cout << "REL START" << std::endl;
+        bool res = hg->relational_check(opts);
+        std::cout << "REL DONE" << std::endl;
+
+        *(hg->REL_done) = true;
+        std::lock_guard<std::mutex> lk(*(hg->m));
+        hg->res->at(2) = (res ? 1 : 0);
+        // std::cout << "Worker thread 2 signals data processing completed\n";
+    }
+    hg->cv->notify_all();
+
+}
+
+
+
+
+
+
+
+
+bool Heighted_graph::thors_hammer(int opts,Heighted_graph* hg_sd,Heighted_graph* hg_xsd){
+
+    // std::mutex* m;
+    // std::condition_variable* cv;
+    // bool* mainReady
+    // bool* SD_done;
+    // bool* XSD_done;
+    // bool* REL_done;
+    // std::vector<int>* res;
+
+    this->m = new std::mutex();
+    this->cv = new std::condition_variable();
+    this->mainReady = new bool(false);
+    this->SD_done = new bool(false);
+    this->XSD_done = new bool(false);
+    this->REL_done = new bool(false);
+    this->res = new std::vector<int>();
+
+    hg_sd->m =this->m;
+    hg_sd->cv =this->cv;
+    hg_sd->mainReady =this->mainReady;
+    hg_sd->SD_done =this->SD_done;
+    hg_sd->XSD_done =this->XSD_done;
+    hg_sd->REL_done =this->REL_done;
+    hg_sd->res =this->res;
+
+    hg_xsd->m =this->m;
+    hg_xsd->cv =this->cv;
+    hg_xsd->mainReady =this->mainReady;
+    hg_xsd->SD_done =this->SD_done;
+    hg_xsd->XSD_done =this->XSD_done;
+    hg_xsd->REL_done =this->REL_done;
+    hg_xsd->res =this->res;
+
+
+    res->push_back(-1);
+    res->push_back(-1);
+    res->push_back(-1);
+
+    // Heighted_graph* hg_sd = new Heighted_graph(max_nodes); 
+    // Heighted_graph* hg_xsd = new Heighted_graph(max_nodes);
+
+ 
+    std::thread t_sd(thor_sd,hg_sd);
+    std::thread t_xsd(thor_xsd,hg_xsd);
+    std::thread t_rel(thor_rel,this,opts);
+
+    t_sd.detach();
+    t_xsd.detach();
+    t_rel.detach();
+    
+    {
+        std::lock_guard<std::mutex> lk(*m);
+        *mainReady = true;
+    }
+    cv->notify_all();
+
+
+    {
+        std::unique_lock<std::mutex> lk(*m);
+        cv->wait(lk, [this]{
+            if( this->res->at(0) != -1){
+                std::cout << "SD DONE " << (this->res->at(0)) << std::endl;
+                if( this->res->at(0) == 1 ) return true;
+                // return true;
+                // return (res->at(0) == 1 ? true : false );
+            }
+            if( this->res->at(1) != -1 ){
+                std::cout << "XSD DONE "<< (this->res->at(1) )<< std::endl;
+                if( this->res->at(1) == 1 ) return true;
+            }
+            if( this->res->at(2) != -1 ){
+                std::cout << "REL DONE "<< (this->res->at(2) )<< std::endl;
+                return true;
+            }
+            std::cout << "HELLO" << std::endl;
+            return false;
+            }
+        );
+    }
+    std::cout << "Back in main()"<< '\n';
+
+    
+
+
+    std::cout << "PAPA"<< '\n';
+ 
+  
+    // t_xsd.detach();
+    // t_rel.detach();
+    if( res->at(0) == 1 ) return true;
+    if( res->at(1) == 1 ) return true;
+    return (res->at(2) == 1 ? true : false);
+
+}

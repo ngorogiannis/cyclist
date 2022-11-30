@@ -10,6 +10,8 @@
 #include "types.c"
 #include <vector>
 #include <thread>
+#include <mutex>
+#include <condition_variable>
 
 #define DURATION std::milli
 
@@ -30,6 +32,8 @@ private:
 
 
     int flags;
+
+
 
 #ifdef LOG_STATS
     int                     ccl_initial_size;
@@ -54,6 +58,17 @@ private:
     bool check_Ccl(int opts);
 
 public:
+
+    
+    std::mutex* m;
+    std::condition_variable* cv;
+    bool* mainReady;
+    bool* SD_done;
+    bool* XSD_done;
+    bool* REL_done;
+    std::vector<int>* res;
+    
+
 
     // Option flags
     static const int FAIL_FAST;
@@ -84,6 +99,19 @@ public:
     bool xsd_check();
     void print_Ccl(void);
     void print_statistics(void);
+
+
+    //=========== THOR ==========
+
+
+    
+
+    bool thors_hammer(int opts,Heighted_graph*,Heighted_graph*);
+    // void thor_sd(void);
+    // void thor_xsd(void);
+    // void thor_rel(int opts);
+    
+
 };
 
 #endif
