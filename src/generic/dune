@@ -9,7 +9,7 @@
  (foreign_stubs
   (language c)
   (names proof
-    proof_aut trace buchi_soundness
+    proof_aut trace buchi_soundness new_buchi_soundness automata
     types sloped_relation generic_graph heighted_graph relational_soundness graph_algorithms)
   (flags :standard -xc++ -std=c++17 (:include c_flags.sexp))
   (include_dirs %{ocaml_where}/caml))

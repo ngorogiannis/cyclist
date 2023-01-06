@@ -23,6 +23,11 @@ extern "C" {
 #include "proof_aut.hpp"
 #include "trace.hpp"
 
+#include <spot/twaalgos/hoa.hh>
+#include <spot/twa/twagraph.hh>
+
+
+
 static std::shared_ptr<ProofAutomaton> proof = 0;
 static std::map< int, Vertex > bdd_map;
 
@@ -154,3 +159,5 @@ extern "C" void set_initial_vertex(value v_) {
 	proof->set_initial_vertex( bdd_map[v] );
 	CAMLreturn0;
 }
+
+

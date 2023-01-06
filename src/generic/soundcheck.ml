@@ -7,6 +7,9 @@ type soundness_method =
   | RELATIONAL_CPP
   | SD_CPP
   | XSD_CPP
+  | SLEDGE_HAMMER
+  | SPOT_NEW
+
 
 let soundness_method = ref RELATIONAL_OCAML
 let use_spot () = 
@@ -17,7 +20,12 @@ let use_sprengerdam () =
   soundness_method := SD_CPP
 let use_xtd_sprengerdam () =
   soundness_method := XSD_CPP
+
+let use_sledge_hammer () = 
+  soundness_method := SLEDGE_HAMMER
   
+let use_spot_new () = 
+  soundness_method := SPOT_NEW
 module IntPair = struct
   include Pair.Make(Int)(Int)
   include Containers.Make(Pair.Make(Int)(Int))
@@ -244,8 +252,7 @@ module BuchiCheck = struct
   external tag_vertex : int -> int -> unit = "tag_vertex"
   external set_successor : int -> int -> unit = "set_successor"
   external set_trace_pair : int -> int -> int -> int -> unit = "set_trace_pair"
-  external set_progress_pair : int -> int -> int -> int -> unit
-    = "set_progress_pair"
+  external set_progress_pair : int -> int -> int -> int -> unit = "set_progress_pair"
   external check_soundness : unit -> bool = "check_soundness_buchi"
   external get_paut_hoa : unit -> string = "get_proof_aut_hoa"
   external get_taut_hoa : unit -> string = "get_trace_aut_hoa"
@@ -696,6 +703,8 @@ module RelationalCheck = struct
     external xsd_check : unit -> bool = "xsd_check"
     external print_ccl : unit -> unit = "print_ccl"
     external print_stats : unit -> unit = "print_statistics"
+    external test : unit -> bool = "test"
+
 
     (* Flags for applying different optimisations in the C++ code
        These values MUST match the corresponding constants in the C++ code
@@ -781,6 +790,175 @@ module RelationalCheck = struct
 
 end
 
+
+
+module NewAutomata = struct
+
+  external create_hgraph : int -> unit = "create_auto_new"
+  external destroy_hgraph : unit -> unit = "destroy_auto_new"
+  external add_node : int -> unit = "add_node_auto_new"
+  external add_height : int -> int -> unit = "add_height_auto_new"
+  external add_edge : int -> int -> unit = "add_edge_auto_new"
+  external add_decrease : int -> int -> int -> int -> unit = "add_decr_auto_new"
+  external add_stay : int -> int -> int -> int -> unit = "add_stay_auto_new"
+  external test : unit -> bool = "test_auto_new"
+
+
+  let build_HG p =
+    let process_succ n (n', tps, prog) =
+      add_edge n n' ;
+      IntPair.Set.iter
+        (fun ((h, h') as p) ->
+          if IntPair.Set.mem p prog
+            then add_decrease n h n' h'
+            else add_stay n h n' h')
+        (tps) ;
+      in
+    let add_heights n (tags, _) =
+      Int.Set.iter (add_height n) tags in
+    let add_edges n (_, succs) =
+      List.iter (process_succ n) succs in
+    Stats.MC.call () ;
+    debug (fun () -> "Checking soundness starts...") ;
+    create_hgraph (Lib.Int.Map.cardinal p) ;
+    Int.Map.iter add_heights p ;
+    Int.Map.iter add_edges p ;
+    let retval = test () in
+    retval
+
+
+end
+
+
+
+module SledgeHammer = struct
+
+  external create_aut : int -> unit = "create_aut"
+  external destroy_aut : unit -> unit = "destroy_aut"
+  external create_vertex : int -> unit = "create_vertex"
+  external tag_vertex : int -> int -> unit = "tag_vertex"
+  external set_successor : int -> int -> unit = "set_successor"
+  external set_trace_pair : int -> int -> int -> int -> unit = "set_trace_pair"
+  external set_progress_pair : int -> int -> int -> int -> unit = "set_progress_pair"
+  external check_soundness : unit -> bool = "check_soundness_buchi"
+  external get_paut_hoa : unit -> string = "get_proof_aut_hoa"
+  external get_taut_hoa : unit -> string = "get_trace_aut_hoa"
+  external set_initial_vertex : int -> unit = "set_initial_vertex"
+  external create_hgraph : int -> unit = "create_hgraph"
+  external destroy_hgraph : unit -> unit = "destroy_hgraph"
+  external add_node : int -> unit = "add_node"
+  external add_height : int -> int -> unit = "add_height"
+  external add_edge : int -> int -> unit = "add_edge"
+  external add_stay : int -> int -> int -> int -> unit = "add_stay"
+  external add_decrease : int -> int -> int -> int -> unit = "add_decr"
+  external relational_check : int -> bool = "relational_check"
+  external sd_check : unit -> bool = "sd_check"
+  external xsd_check : unit -> bool = "xsd_check"
+  external print_ccl : unit -> unit = "print_ccl"
+  external print_stats : unit -> unit = "print_statistics"
+  external test : unit -> bool = "test"
+
+  (* Flags for applying different optimisations in the C++ code
+    These values MUST match the corresponding constants in the C++ code
+    Check heighted_graph.c
+  *)
+  let flag_fail_fast = 0b0001
+  let flag_use_scc_check = 0b0010
+  let flag_use_idempotence = 0b0100
+  let flag_use_minimality = 0b1000
+  let flag_compute_full_ccl = 0b10000
+
+  let opts = ref 0
+  let do_stats = ref false
+
+  let fail_fast () =
+    opts := !opts lor flag_fail_fast
+  let use_scc_check () =
+    if not (Int.equal (!opts land flag_use_idempotence) 0) then
+      prerr_endline
+        "Cannot use both idempotence and SCC-based loop check - ignoring SCC-based loop check!"
+    else
+    opts := !opts lor flag_use_scc_check
+  let use_idempotence () =
+    let use_min = not (Int.equal (!opts land flag_use_minimality) 0) in
+    let use_scc = not (Int.equal (!opts land flag_use_scc_check) 0) in
+    if use_min then
+        prerr_endline
+          "Cannot use both idempotence and minimality - ignoring idempotence!" ;
+    if use_scc then
+      prerr_endline
+        "Cannot use both idempotence and SCC-based loop check - ignoring idempotence!" ;
+    if (not use_min) && (not use_scc) then
+      opts := !opts lor flag_use_idempotence
+  let use_minimality () =
+    if not (Int.equal (!opts land flag_use_idempotence) 0) then
+      prerr_endline
+        "Cannot use both minimality and idempotence - ignoring minimality!"
+    else
+      opts := !opts lor flag_use_minimality
+  let compute_full_ccl () =
+    opts := !opts lor flag_compute_full_ccl
+
+  let build_HG p =
+    let process_succ n (n', tps, prog) =
+      add_edge n n' ;
+      IntPair.Set.iter
+        (fun ((h, h') as p) ->
+          if IntPair.Set.mem p prog
+            then add_decrease n h n' h'
+            else add_stay n h n' h')
+        (tps) ;
+      in
+    let add_heights n (tags, _) =
+      Int.Set.iter (add_height n) tags in
+    let add_edges n (_, succs) =
+      List.iter (process_succ n) succs in
+    Stats.MC.call () ;
+    debug (fun () -> "Checking soundness starts...") ;
+    create_hgraph (Lib.Int.Map.cardinal p) ;
+    Int.Map.iter add_heights p ;
+    Int.Map.iter add_edges p 
+
+  (**Previous Automata *)
+  let print_paut = ref false
+  let print_taut = ref false
+
+  let build_automata ?(init=0) p =
+    Stats.MC.call () ;
+    let create_tags i n = Int.Set.iter (tag_vertex i) (get_tags n) in
+    let create_succs i (_, l) =
+      Blist.iter (fun (j, _, _) -> set_successor i j) l
+    in
+    let create_trace_pairs i (_, l) =
+      let do_tag_transitions (j, tvs, tps) =
+        IntPair.Set.iter (fun (k, m) -> set_trace_pair i j k m) tvs ;
+        IntPair.Set.iter (fun (k, m) -> set_progress_pair i j k m) tps
+      in
+      Blist.iter do_tag_transitions l
+    in
+    let size = Int.Map.cardinal p in
+    let log2size =
+      1 + int_of_float (ceil (log (float_of_int size) /. log 2.0))
+    in
+    debug (fun () -> "Checking soundness starts...") ;
+    create_aut log2size ;
+    Int.Map.iter (fun i _ -> create_vertex i) p ;
+    Int.Map.iter create_tags p ;
+    Int.Map.iter create_succs p ;
+    set_initial_vertex init ;
+    Int.Map.iter create_trace_pairs p 
+
+
+    (*let retval = check_soundness () in
+    if retval then Stats.MC.accept () else Stats.MC.reject () ;
+    destroy_aut () ;
+    debug (fun () ->
+        "Checking soundness ends, result=" ^ if retval then "OK" else "NOT OK" ) ;
+    retval*)
+
+
+end
+
 include (RelationalCheck.Ext : sig
   val fail_fast : unit -> unit
   val use_scc_check : unit -> unit
@@ -798,6 +976,8 @@ let arg_opts =
     ("-rel-ext", Arg.Unit use_external, ": use external C++ relation-based check to verify pre-proof validity") ;
     ("-SD", Arg.Unit use_sprengerdam, ": use Sprenger-Dam check to verify pre-proof validity") ;
     ("-XSD", Arg.Unit use_xtd_sprengerdam, ": use Extended Sprenger-Dam check to verify pre-proof validity") ;
+    ("-SH", Arg.Unit use_sledge_hammer, ": use sledge-hammer validty check") ;
+    ("-spot-new", Arg.Unit use_spot_new, ": use new spot to verify pre-proof validity") ;
     ("-ff", Arg.Unit fail_fast, ": use fast fail in relation-based validty check") ;
     ("-scc", Arg.Unit use_scc_check, ": use SCC check in relation-based validity check") ;
     ("-idem", Arg.Unit use_idempotence, ": use idempotency optimisation in relation-based validity check") ;
@@ -854,6 +1034,12 @@ let check_proof ?(init=0) ?(minimize=true) prf =
             BuchiCheck.check_proof ~init aprf
           | RELATIONAL_OCAML ->
             RelationalCheck.check_proof aprf
+          | SLEDGE_HAMMER ->
+            SledgeHammer.build_automata aprf;
+            SledgeHammer.build_HG aprf;
+            RelationalCheck.Ext.test ()
+          | SPOT_NEW ->
+          NewAutomata.build_HG aprf
           | _ ->
             RelationalCheck.Ext.check_proof aprf in
         Stats.MCCache.call () ;
@@ -865,3 +1051,5 @@ let check_proof ?(init=0) ?(minimize=true) prf =
         (*     limit := 10 * !limit                                                           *)
         (*   end ;                                                                            *)
         r
+
+        
