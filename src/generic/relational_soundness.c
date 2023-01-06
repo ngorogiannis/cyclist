@@ -1,5 +1,22 @@
 #include <cassert>
 #include <memory>
+#include <spot/twa/twa.hh>
+#include <spot/twa/bdddict.hh>
+#include <spot/tl/defaultenv.hh>
+
+#include <spot/twaalgos/contains.hh>
+#include <spot/twaalgos/determinize.hh>
+#include <spot/twaalgos/dualize.hh>
+#include <spot/twaalgos/totgba.hh>
+#include <spot/twaalgos/copy.hh>
+#include <spot/twaalgos/stutter.hh>
+#include <spot/twa/twaproduct.hh>
+#include <spot/twaalgos/gtec/gtec.hh>
+#include <spot/twaalgos/dot.hh>
+#include <spot/twaalgos/hoa.hh>
+#include <spot/twaalgos/remfin.hh>
+#include <iostream>
+#include <sstream>
 
 extern "C" {
 #include <memory.h>
@@ -7,6 +24,11 @@ extern "C" {
 }
 
 #include "heighted_graph.hpp"
+
+#include <spot/twaalgos/hoa.hh>
+#include <spot/twa/twagraph.hh>
+
+
 
 static std::shared_ptr<Heighted_graph> hg_0 = 0;
 static std::shared_ptr<Heighted_graph> hg_1 = 0;
@@ -153,4 +175,41 @@ extern "C" value xsd_check() {
   bool retval = (hg_0->xsd_check());
   v_res = Val_bool(retval);
   CAMLreturn(v_res);
+}
+
+
+extern "C" value test(){
+	CAMLparam0();
+
+	
+  spot::bdd_dict_ptr dict = spot::make_bdd_dict();
+  spot::twa_graph_ptr aut = make_twa_graph(dict);
+  aut->set_buchi();
+
+  
+
+
+  bdd p1 = bdd_ithvar(aut->register_ap("a"));
+  bdd p2 = bdd_ithvar(aut->register_ap("b"));
+
+  
+
+  
+
+  aut->new_states(2);
+  aut->set_init_state(0U);
+
+  aut->new_edge(0, 1, p1);
+  aut->new_edge(1, 1, p1 & p2, {0});
+  aut->new_edge(1, 2, p2, {0});
+  aut->new_edge(2, 1, p1 | p2, {0});
+
+  // Print the resulting automaton.
+  print_dot(std::cout, aut);
+  
+	
+	CAMLlocal1(v_res);
+	v_res = Val_bool(true);
+	CAMLreturn(v_res);
+
 }

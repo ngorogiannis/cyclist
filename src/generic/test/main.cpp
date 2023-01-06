@@ -2,6 +2,10 @@
 #include "json.hpp"
 #include "../types.c"
 #include "../heighted_graph.hpp"
+#include <spot/twaalgos/hoa.hh>
+#include <spot/twa/twagraph.hh>
+
+#include <iostream>
 
 using json = nlohmann::json;
 
@@ -69,4 +73,5 @@ int main(int argc, char** argv) {
 
     std::cout << "Provide test file name!\n";
     return -1;
+
 }

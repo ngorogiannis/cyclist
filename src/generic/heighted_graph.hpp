@@ -13,6 +13,34 @@
 #include <mutex>
 #include <condition_variable>
 
+//======================================================
+#include <cassert>
+#include <memory>
+#include <spot/twa/twa.hh>
+#include <spot/twa/bdddict.hh>
+#include <spot/tl/defaultenv.hh>
+
+#include <spot/twaalgos/contains.hh>
+#include <spot/twaalgos/determinize.hh>
+#include <spot/twaalgos/dualize.hh>
+#include <spot/twaalgos/totgba.hh>
+#include <spot/twaalgos/copy.hh>
+#include <spot/twaalgos/stutter.hh>
+#include <spot/twa/twaproduct.hh>
+#include <spot/twaalgos/gtec/gtec.hh>
+#include <spot/twaalgos/dot.hh>
+#include <spot/twaalgos/hoa.hh>
+#include <spot/twaalgos/remfin.hh>
+
+#include <spot/twaalgos/hoa.hh>
+#include <spot/twa/twagraph.hh>
+
+#include <iostream>
+#include <sstream>
+//======================================================
+
+
+
 #define DURATION std::milli
 
 class Heighted_graph {
@@ -99,6 +127,7 @@ public:
     bool xsd_check();
     void print_Ccl(void);
     void print_statistics(void);
+
 
 
     //=========== THOR ==========

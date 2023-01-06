@@ -773,3 +773,5 @@ bool Heighted_graph::thors_hammer(int opts,Heighted_graph* hg_sd,Heighted_graph*
     return (res->at(2) == 1 ? true : false);
 
 }
+
+
