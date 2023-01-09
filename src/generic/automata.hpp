@@ -21,9 +21,6 @@
 #include <spot/twa/twagraph.hh>
 #include <iostream>
 #include <sstream>
-#include "proof_aut.hpp"
-#include "trace.hpp"
-#include "heighted_graph.hpp"
 #include "types.c"
 #include <cmath>
 #include <bitset>
