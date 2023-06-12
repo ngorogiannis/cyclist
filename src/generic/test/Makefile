@@ -16,11 +16,14 @@ endef
 
 all: soundness tests
 
-soundness: main.o sloped_relation.o heighted_graph.o  graph_algorithms.o
-	g++ -pthread -g -o soundness main.o sloped_relation.o heighted_graph.o  graph_algorithms.o
+soundness: main.o sloped_relation.o heighted_graph.o  graph_algorithms.o automata.o
+	g++ -pthread -lspot -g -o soundness main.o sloped_relation.o heighted_graph.o  graph_algorithms.o
 
 main.o: main.cpp ../heighted_graph.hpp 
-	g++ ${CFLAGS} -I ../ -L/opt/lib -g -c main.cpp -o main.o
+	g++ ${CFLAGS} -I ../ -L/opt/lib -g -c main.cpp -o main.o -lspot
+
+automata.o : ../automata.c
+	g++ ${CFLAGS} -I ../ -L/opt/lib -g -c ../automata.c -o automata.o -lspot
 
 heighted_graph.o: ../heighted_graph.hpp ../heighted_graph.c ../sloped_relation.hpp ../types.c
 	g++ ${CFLAGS} -pthread -I ../ -L/usr/lib -L/opt/lib -g -c ../heighted_graph.c -o heighted_graph.o

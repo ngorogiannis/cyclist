@@ -111,17 +111,17 @@ void Automata::register_AP(){
 //=================================================================
 void Automata::generate_atomic_BDD(){
 
-    for( int src = 0 ; src < s_init_ip ; src++ ){
-        for( int sink = 0 ; sink < s_init_ip ; sink++ ){
+    for( int src = 0 ; src < max_node ; src++ ){
+        for( int sink = 0 ; sink < max_node ; sink++ ){
 
             int64_t code = 0;
-            bdd curr_bdd = bddfalse;
+            bdd curr_bdd = bddtrue;
 
             if( h_change[src][sink] != 0 ) code = encode_relation(h_change[src][sink]);
             
             for( int64_t i = 0 ; i < ap_size ; ++i ){
                 bdd b = propositions[i];
-                curr_bdd |= ((code % 2) ? bdd_not(b) : b );
+                curr_bdd &= ((code % 2) ?  b : bdd_not(b) );
                 code >>=1;
             }
 
@@ -141,31 +141,7 @@ void Automata::generate_BDD_combinations(){
 //=================================================================
 void Automata::add_transitions(void){
 
-
-    // for now I am not utilizing the full potential of BDD. Just want to make sure this is sound.
-    //      check -void Automata::generate_BDD_combinations()- for "mor"e details.
-
-    for( int src = 0 ; src < s_init_ip ; src++ ){
-        for( int sink = 0 ; sink < s_init_ip ; sink++ ){
-
-            bdd_encoding_ipath.insert( Pair<Int_pair,bdd>( Int_pair(src,sink) , bddfalse ) );
-
-            if( h_change[src][sink] != 0 ){
-                bdd curr_bdd = bdd_encoding_global.at(Int_pair(src,sink));
-                aut_ipath->new_edge(src, sink, curr_bdd, {0});
-                aut_ipath->new_edge(s_init_ip, s_init_ip, curr_bdd );
-                aut_trace->new_edge(s_init_tr, s_init_tr, curr_bdd );
-                for( int i = 0 ; i < s_init_ip ; i++ ){
-                    aut_ipath->new_edge(s_init_ip, i, curr_bdd );
-                }  
-                for( int h1 = 0 ; h1 <= max_height ; h1++ ){
-                    aut_trace->new_edge(s_init_tr, h1, curr_bdd );
-                }  
-            }
-        }
-    }
-
-
+    bdd trace_init_bdd = bddfalse;
     for( int h1 = 0 ; h1 <= max_height ; h1++ ){
         for( int h2 = 0 ; h2 <= max_height ; h2++ ){
 
@@ -175,13 +151,15 @@ void Automata::add_transitions(void){
             bdd letter_not_acc = bddfalse;
 
 
-            for( int src = 0 ; src < s_init_ip ; src++ ){
-                for( int sink = 0 ; sink < s_init_ip ; sink++ ){
-                    if( h_change[src][sink] == 0 ){
-                        continue;
-                    }
+            for( int src = 0 ; src < max_node ; src++ ){
+                for( int sink = 0 ; sink < max_node ; sink++ ){
+                    if( h_change[src][sink] == 0 ) continue;
                     bdd curr_bdd = bdd_encoding_global.at(Int_pair(src,sink));
+                    if( h1 == 0 ) trace_init_bdd |= curr_bdd;
+                    if( h1 == 0 && h2 == 0 ) aut_ipath->new_edge(src, sink, curr_bdd, {0});
+                    
                     int s = h_change[src][sink][h1][h2];
+
                     if( s == Stay ){
                         has_edge = true;
                         letter_not_acc |= curr_bdd;
@@ -195,9 +173,28 @@ void Automata::add_transitions(void){
 
             if( has_edge ) aut_trace->new_edge(h1, h2, letter_not_acc);
             if( accepting ) aut_trace->new_edge(h1, h2, letter_acc,{0});
+            if( h1 == 0 ) aut_trace->new_edge(s_init_tr, h2, trace_init_bdd );
 
         }
     }
+    aut_trace->new_edge(s_init_tr, s_init_tr, trace_init_bdd);
+
+
+
+
+    // for now I am not utilizing the full potential of BDD. Just want to make sure this is sound.
+    //      check -void Automata::generate_BDD_combinations()- for "mor"e details.
+
+    // for( int src = 0 ; src < max_node ; src++ ){
+    //     for( int sink = 0 ; sink < max_node ; sink++ ){
+
+    //         if( h_change[src][sink] != 0 ){
+    //             bdd curr_bdd = bdd_encoding_global.at(Int_pair(src,sink));
+    //             aut_ipath->new_edge(src, sink, curr_bdd, {0});
+    //         }
+    //     }
+    // }
+
 }
 //=================================================================
 void Automata::init_automata(){
@@ -205,10 +202,9 @@ void Automata::init_automata(){
     aut_ipath = make_twa_graph(dict);
     aut_trace = make_twa_graph(dict);
 
-    s_init_ip = max_node;
     aut_ipath->set_buchi();
-    aut_ipath->new_states(max_node+1);
-    aut_ipath->set_init_state(s_init_ip);
+    aut_ipath->new_states(max_node);
+    aut_ipath->set_init_state(0);
 
     s_init_tr = max_height+1;
     aut_trace->set_buchi();
@@ -226,8 +222,8 @@ bool Automata::check_soundness(){
     generate_BDD_combinations();
     add_transitions();
 
-    print_dot(std::cout,aut_trace);
-    print_dot(std::cout,aut_ipath);
+    // print_dot(std::cout,aut_trace);
+    // print_dot(std::cout,aut_ipath);
 
     return spot::contains(aut_trace,aut_ipath);
 
